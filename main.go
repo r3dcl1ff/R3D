@@ -26,11 +26,11 @@ var (
     }
     filenames = []string{
         "backup", "database", "dump", "db", "data", "sql", "mysqldump", "backup_", "database_", "db_backup", "dump_", "dumpfile", "export", "latest_backup", "site_backup", "website_backup", "wordpress_backup", "joomla_backup", "magento_backup", "wp_backup", "sql_backup", "mysql_backup", "user_data", "customer_data", "production_db", "prod_db", "test_db", "staging_db", "dev_db", "admin_db", "old_db", "new_db", "data_backup", "all_data", "full_backup", "complete_backup", "backupfile", "dbexport", "dbdumpfile", "{{Hostname}}", "{{Hostname}}_db", "{{Hostname}}_backup", "{{Hostname}}_dump", "{{Hostname}}_{{date_time('%Y%m%d')}}", "backup{{date_time('%Y%m%d')}}", "db{{date_time('%Y%m%d')}}", "database{{date_time('%Y%m%d')}}", "backup{{date_time('%Y-%m-%d')}}", "db{{date_time('%Y-%m-%d')}}", "database{{date_time('%Y-%m-%d')}}", "backup_{{date_time('%Y-%m-%d')}}", "db_{{date_time('%Y-%m-%d')}}",
-        // ... additional filenames ...
+        // ... additional filenames if appropriate...
     }
     extensions = []string{
         "sql", "sql.gz", "sql.zip", "sql.bz2", "sql.xz", "db", "bak", "zip", "gz", "tar", "tar.gz", "tgz", "rar", "7z", "bak.gz", "bak.zip", "tar.bz2", "bz2", "xz", "dump", "backup", "sql.bak", "sql.tar", "db.gz", "db.zip", "db.bak", "db.tar", "sqlite", "sqlite3", "tmp", "temp", "old", "orig", "copy", "save", "swp", "bk", "old.bak",
-        // ... additional extensions ...
+        // ... additional extensions if needed...
     }
 )
 
@@ -49,7 +49,6 @@ var fileSignatures = []FileSignature{
     {Extension: "sql", Magic: []byte("SQL Server database backup"), Offset: -1},
     {Extension: "sql", Magic: []byte("/*"), Offset: -1},
     {Extension: "sql", Magic: []byte("BEGIN TRANSACTION;"), Offset: -1},
-    {Extension: "sql", Magic: []byte("SQLite format 3"), Offset: -1},
     {Extension: "sql", Magic: []byte("CREATE TABLE"), Offset: -1},
     {Extension: "sql", Magic: []byte("INSERT INTO"), Offset: -1},
     {Extension: "sql", Magic: []byte("DROP TABLE"), Offset: -1},
@@ -65,8 +64,15 @@ var fileSignatures = []FileSignature{
     {Extension: "7z", Magic: []byte{0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c}, Offset: 0},
     // Tar files
     {Extension: "tar", Magic: []byte{0x75, 0x73, 0x74, 0x61, 0x72}, Offset: 257},
-    // Database files (SQLite)
+    // RAR files
+    {Extension: "rar", Magic: []byte{0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x00}, Offset: 0}, // RAR versions 1.5 - 4.0
+    {Extension: "rar", Magic: []byte{0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x01, 0x00}, Offset: 0}, // RAR 5.0+
+    // SQLite database files
     {Extension: "db", Magic: []byte("SQLite format 3"), Offset: 0},
+    {Extension: "sqlite", Magic: []byte("SQLite format 3"), Offset: 0},
+    {Extension: "sqlite3", Magic: []byte("SQLite format 3"), Offset: 0},
+    // Vim swap files
+    {Extension: "swp", Magic: []byte{0x42, 0x30}, Offset: 0}, // Starts with "b0"
     // Additional signatures can be added here
 }
 
@@ -77,10 +83,34 @@ var extensionMap = map[string]string{
     "sql.zip":    "zip",
     "sql.bz2":    "bz2",
     "sql.xz":     "xz",
-    "db":         "db",
+    "sql.tar":    "tar",
     "sql.7z":     "7z",
     "sql.tar.gz": "gz",
+    "sql.bak":    "bak", // No specific signature
+    "db":         "db",
+    "db.gz":      "gz",
+    "db.zip":     "zip",
+    "db.bz2":     "bz2",
+    "db.xz":      "xz",
+    "db.tar":     "tar",
+    "db.7z":      "7z",
+    "db.rar":     "rar",
+    "db.bak":     "bak", // No specific signature
+    "bak":        "bak", // No specific signature
+    "bak.gz":     "gz",
+    "bak.zip":    "zip",
+    "bak.bz2":    "bz2",
+    "bak.xz":     "xz",
+    "bak.tar":    "tar",
+    "bak.7z":     "7z",
+    "bak.rar":    "rar",
+    "tar.gz":     "gz",
+    "tgz":        "gz",
+    "tar.bz2":    "bz2",
+    "rar":        "rar",
     "sqlite":     "db",
+    "sqlite3":    "db",
+    "swp":        "swp",
     // ... additional mappings ...
 }
 
@@ -449,7 +479,7 @@ func min(a, b int) int {
     return b
 }
 
-// Function to format duration in a human-readable way
+// Function to format duration of scan
 func formatDuration(d time.Duration) string {
     d = d.Round(time.Second)
     h := d / time.Hour
