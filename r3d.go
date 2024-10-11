@@ -18,14 +18,21 @@ import (
     "time"
 )
 
+// Color codes
+var (
+    red   = "\033[31m"
+    cyan  = "\033[36m"
+    reset = "\033[0m"
+)
+
 // Global variables for payloads
 var (
     dirs = []string{
-        "/", "/backup/", "/db/", "/database/", "/dump/", "/sql/", "/data/", "/temp/", "/tmp/", "/dumps/",
+        "/", "/backup/", "/db/", "/database/", "/dump/", "/sql/", "/data/", "/temp/", "/tmp/", "/dumps/", "/web/", "/api/",
         // ... additional directories if needed ...
     }
     filenames = []string{
-        "backup", "database", "dump", "db", "data", "sql", "mysqldump", "backup_", "database_", "db_backup", "dump_", "dumpfile", "export", "latest_backup", "site_backup", "website_backup", "wordpress_backup", "joomla_backup", "magento_backup", "wp_backup", "sql_backup", "mysql_backup", "user_data", "customer_data", "production_db", "prod_db", "test_db", "staging_db", "dev_db", "admin_db", "old_db", "new_db", "data_backup", "all_data", "full_backup", "complete_backup", "backupfile", "dbexport", "dbdumpfile", "{{Hostname}}", "{{Hostname}}_db", "{{Hostname}}_backup", "{{Hostname}}_dump", "{{Hostname}}_{{date_time('%Y%m%d')}}", "backup{{date_time('%Y%m%d')}}", "db{{date_time('%Y%m%d')}}", "database{{date_time('%Y%m%d')}}", "backup{{date_time('%Y-%m-%d')}}", "db{{date_time('%Y-%m-%d')}}", "database{{date_time('%Y-%m-%d')}}", "backup_{{date_time('%Y-%m-%d')}}", "db_{{date_time('%Y-%m-%d')}}",
+        "backup", "database", "web", "dump", "db", "data", "sql", "mysqldump", "backup_", "database_", "db_backup", "dump_", "dumpfile", "export", "latest_backup", "site_backup", "website_backup", "wordpress_backup", "joomla_backup", "magento_backup", "wp_backup", "sql_backup", "mysql_backup", "user_data", "customer_data", "production_db", "prod_db", "test_db", "staging_db", "dev_db", "admin_db", "old_db", "new_db", "data_backup", "all_data", "full_backup", "complete_backup", "v1", "backupfile", "dbexport", "dbdumpfile", "{{Hostname}}", "{{Hostname}}_db", "{{Hostname}}_backup", "{{Hostname}}_dump", "{{Hostname}}_{{date_time('%Y%m%d')}}", "backup{{date_time('%Y%m%d')}}", "db{{date_time('%Y%m%d')}}", "database{{date_time('%Y%m%d')}}", "backup{{date_time('%Y-%m-%d')}}", "db{{date_time('%Y-%m-%d')}}", "database{{date_time('%Y-%m-%d')}}", "backup_{{date_time('%Y-%m-%d')}}", "db_{{date_time('%Y-%m-%d')}}",
         // ... additional filenames if appropriate...
     }
     extensions = []string{
@@ -136,10 +143,10 @@ var errorIndicators = []string{
 
 // Result struct for output
 type Result struct {
-    URL          string `json:"url"`
-    ContentType  string `json:"content_type"`
+    URL           string `json:"url"`
+    ContentType   string `json:"content_type"`
     ContentLength int64  `json:"content_length"`
-    StatusCode   int    `json:"status_code"`
+    StatusCode    int    `json:"status_code"`
 }
 
 // Main function
@@ -151,12 +158,30 @@ func main() {
     maxGoroutinesFlag := flag.Int("c", 20, "Maximum number of concurrent requests (default: 20)")
     jsonOutputFlag := flag.Bool("json", false, "Enable JSON output")
     progressFlag := flag.Bool("p", false, "Display progress")
+    dirFlag := flag.String("dir", "", "Specific directory or directories to crawl (comma-separated)")
+    fileFlag := flag.String("file", "", "Specific file extension(s) to look for (comma-separated)")
     flag.Parse()
 
     // Display help if requested
     if *helpFlag {
         displayHelp()
         return
+    }
+
+    // Handle specific directories
+    if *dirFlag != "" {
+        dirs = strings.Split(*dirFlag, ",")
+        for i := range dirs {
+            dirs[i] = strings.TrimSpace(dirs[i])
+        }
+    }
+
+    // Handle specific file extensions
+    if *fileFlag != "" {
+        extensions = strings.Split(*fileFlag, ",")
+        for i := range extensions {
+            extensions[i] = strings.TrimSpace(extensions[i])
+        }
     }
 
     // Display banner
@@ -205,7 +230,7 @@ func main() {
                     fmt.Println(string(jsonData))
                 }
             } else {
-                fmt.Printf("Potential file found: %s (Size: %d bytes, Content-Type: %s)\n", result.URL, result.ContentLength, result.ContentType)
+                fmt.Printf(red+"Potential file found: %s (Size: %d bytes, Content-Type: %s)\n"+reset, result.URL, result.ContentLength, result.ContentType)
             }
         }
     }()
@@ -241,7 +266,7 @@ func main() {
 
 // Function to display the help message
 func displayHelp() {
-    fmt.Println("Usage: cat targets.txt | R3D [-d] [-t threshold] [-c concurrency] [-json] [-p]")
+    fmt.Println("Usage: cat targets.txt | R3D [-d] [-t threshold] [-c concurrency] [-json] [-p] [-dir directories] [-file extensions]")
     fmt.Println("Options:")
     fmt.Println("  -h, --help          Display this help message")
     fmt.Println("  -d, --debug         Enable debug mode")
@@ -249,12 +274,12 @@ func displayHelp() {
     fmt.Println("  -c, --concurrency   Maximum number of concurrent requests (default: 20)")
     fmt.Println("  -json               Enable JSON output")
     fmt.Println("  -p, --progress      Display progress and estimated scan duration")
+    fmt.Println("  -dir                Specific directory or directories to crawl (comma-separated)")
+    fmt.Println("  -file               Specific file extension(s) to look for (comma-separated)")
 }
 
 // Function to display the banner
 func displayBanner() {
-    cyan := "\033[36m"
-    reset := "\033[0m"
     fmt.Println(cyan + " ____  ____  ____  " + reset)
     fmt.Println(cyan + "|  _ \\|___ \\|  _ \\ " + reset)
     fmt.Println(cyan + "| |_) | __) | | | |" + reset)
